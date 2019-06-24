@@ -1,6 +1,9 @@
 //
 // Created by borelset on 2019/3/20.
 //
+//  This is an implementation of a content defined chunking algorithm as proposed in the following paper by Wen Xia:
+//  FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data Deduplication
+//  https://www.usenix.org/system/files/conference/atc16/atc16-paper-xia.pdf
 
 #include <stdint.h>
 #include <memory.h>
