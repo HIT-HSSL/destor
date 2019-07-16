@@ -41,7 +41,7 @@ void do_backup(char *path) {
 	start_filter_phase();
 
     do{
-        sleep(5);
+        usleep(100);
         /*time_t now = time(NULL);*/
         fprintf(stderr,"job %" PRId32 ", %" PRId64 " bytes, %" PRId32 " chunks, %d files processed\r", 
                 jcr.id, jcr.data_size, jcr.chunk_num, jcr.file_num);

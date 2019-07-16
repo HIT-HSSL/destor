@@ -10,9 +10,14 @@ include_directories(src/index)
 include_directories(src/recipe)
 include_directories(src/storage)
 include_directories(src/utils)
-include_directories(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
-include_directories(/usr/include/glib-2.0/)
-include_directories(/root/anaconda3/include/)
+#include_directories(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
+#include_directories(/usr/include/glib-2.0/)
+#include_directories(/root/anaconda3/include/)
+include_directories(/usr/local/include/glib-2.0/)
+include_directories(/usr/local/lib/glib-2.0/include/)
+include_directories(/home/zxy/destor/isaInclude)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 
 add_executable(destor
         src/chunking/ae_chunking.c
@@ -79,4 +84,4 @@ add_executable(destor
         src/rewrite_phase.h
         src/trace_phase.c)
 
-target_link_libraries(destor glib pthread ssl crypto)
+target_link_libraries(destor glib-2.0 pthread ssl crypto isal_crypto)

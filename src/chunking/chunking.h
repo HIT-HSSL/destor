@@ -13,6 +13,7 @@ int normalized_rabin_chunk_data(unsigned char *p, int n);
 
 void ae_init();
 int ae_chunk_data(unsigned char *p, int n);
+int ae_chunk_data_v2(unsigned char *p, int n);
 
 int tttd_chunk_data(unsigned char *p, int n);
 

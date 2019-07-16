@@ -306,7 +306,11 @@ int main(int argc, char **argv) {
 			usage();
 		}
 
+		struct timeval t0, t1;
+		gettimeofday(&t0, NULL);
 		do_backup(path);
+		gettimeofday(&t1, NULL);
+		printf("custom total duration:%f\n", t1.tv_sec - t0.tv_sec + (t1.tv_usec - t0.tv_usec) / 1000000 );
 
 		/*
 		 * The backup concludes.

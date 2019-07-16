@@ -87,7 +87,7 @@ void load_config_from_string(sds config) {
 				destor.chunk_algorithm = CHUNK_FIXED;
 			} else if (strcasecmp(argv[1], "rabin") == 0) {
 				destor.chunk_algorithm = CHUNK_RABIN;
-			} else if (strcasecmp(argv[1], "normalized rabin") == 0) {
+			} else if (strcasecmp(argv[1], "normalized_rabin") == 0) {
 				destor.chunk_algorithm = CHUNK_NORMALIZED_RABIN;
 			} else if (strcasecmp(argv[1], "tttd") == 0) {
 				destor.chunk_algorithm = CHUNK_TTTD;
