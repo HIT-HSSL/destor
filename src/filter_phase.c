@@ -34,9 +34,12 @@ static void* filter_thread(void *arg) {
     while (1) {
         struct chunk* c = sync_queue_pop(rewrite_queue);
 
-        if (c == NULL)
+        if (c == NULL){
             /* backup job finish */
+            container_store_sync();
             break;
+        }
+
 
         /* reconstruct a segment */
         struct segment* s = new_segment();

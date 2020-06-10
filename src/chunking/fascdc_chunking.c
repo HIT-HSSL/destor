@@ -66,7 +66,7 @@ void fastcdc_init(uint32_t expectCS){
         memcpy(&g_gear_matrix[i], md5_result, sizeof(uint64_t));
     }
 
-    g_min_fastcdc_chunk_size = 6144;
+    g_min_fastcdc_chunk_size = 2048;
     g_max_fastcdc_chunk_size = 65536;
     g_expect_fastcdc_chunk_size = expectCS;
 }
@@ -75,7 +75,7 @@ void fastcdc_init(uint32_t expectCS){
 int fastcdc_chunk_data(unsigned char *p, int n){
 
     uint64_t fingerprint=0,digest;
-    int i=g_min_fastcdc_chunk_size, Mid=g_min_fastcdc_chunk_size + 4*1024;
+    int i=g_min_fastcdc_chunk_size, Mid=g_min_fastcdc_chunk_size + 8*1024;
     //return n;
 
     if(n<=g_min_fastcdc_chunk_size) //the minimal  subChunk Size.

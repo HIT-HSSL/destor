@@ -67,6 +67,10 @@ void init_container_store() {
     NOTICE("Init container store successfully");
 }
 
+void container_store_sync(){
+    fdatasync(fileno(fp));
+}
+
 void close_container_store() {
 	sync_queue_term(container_buffer);
 
