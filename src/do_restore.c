@@ -5,7 +5,17 @@
 #include "utils/lru_cache.h"
 #include "restore.h"
 
+uint64_t total = 0;
+
+void exam (gpointer key, gpointer value, gpointer user_data){
+    total++;
+}
+
+
 static void* lru_restore_thread(void *arg) {
+
+    GHashTable *table = g_hash_table_new_full(g_int64_hash, g_int64_equal, free, NULL);
+
 	struct lruCache *cache;
 	if (destor.simulation_level >= SIMULATION_RESTORE)
 		cache = new_lru_cache(destor.restore_cache[1], free_container_meta,
@@ -43,12 +53,24 @@ static void* lru_restore_thread(void *arg) {
 				con = retrieve_container_by_id(c->id);
 				lru_cache_insert(cache, con, NULL, NULL);
 				jcr.read_container_num++;
+
+				if(g_hash_table_lookup(table, &c->id) == NULL){
+				    uint64_t* key = (uint64_t*)malloc(sizeof(uint64_t));
+				    *key = c->id;
+				    g_hash_table_insert(table, key, NULL);
+				}
+
 			}
 			struct chunk *rc = get_chunk_in_container(con, &c->fp);
 			assert(rc);
 			TIMER_END(1, jcr.read_chunk_time);
 			sync_queue_push(restore_chunk_queue, rc);
 		}
+
+		total = 0;
+		g_hash_table_foreach(table, exam, NULL);
+		printf("total container read : %lu\n", total);
+		g_hash_table_destroy(table);
 
 		jcr.data_size += c->size;
 		jcr.chunk_num++;
