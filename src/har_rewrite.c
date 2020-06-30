@@ -151,7 +151,7 @@ void close_har() {
 	}
     printf("0%% => container:%lu, size:%lu\n", valid_container_count[0], valid_data_size[0]);
     for(int i=0; i<10; i++){
-        printf("%d%% ~ %d%% => container:%lu, size:%lu\n", i, i+1, valid_container_count[i+1], valid_data_size[i+1]);
+        printf("%d0%% ~ %d0%% => container:%lu, size:%lu\n", i, i+1, valid_container_count[i+1], valid_data_size[i+1]);
     }
     printf("100%% => container:%lu, size:%lu\n", valid_container_count[11], valid_data_size[11]);
 
