@@ -109,9 +109,28 @@ void close_har() {
 	GHashTableIter iter;
 	gpointer key, value;
 	g_hash_table_iter_init(&iter, container_utilization_monitor);
+
+	uint64_t total_container_size = 0;
+	uint64_t valid_data_size[12];
+    uint64_t valid_container_count[12];
+    memset(valid_data_size, 0, sizeof(uint64_t)*12);
+    memset(valid_container_count, 0, sizeof(uint64_t)*12);
+
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
 		struct containerRecord* cr = (struct containerRecord*) value;
 		total_size += cr->size;
+
+		total_container_size += CONTAINER_SIZE - CONTAINER_META_SIZE;
+
+		float utilization = 1.0*cr->size/(CONTAINER_SIZE - CONTAINER_META_SIZE);
+		if(utilization == 0){
+            valid_data_size[0] += cr->size;
+            valid_container_count[0] ++;
+		}else{
+            int index = utilization * 10 + 1.0;
+            valid_data_size[index] += cr->size;
+            valid_container_count[index] ++;
+		}
 
 		if((1.0*cr->size/(CONTAINER_SIZE - CONTAINER_META_SIZE))
 				< destor.rewrite_har_utilization_threshold){
@@ -126,6 +145,12 @@ void close_har() {
 
 			g_sequence_insert_sorted(seq, cr, g_record_cmp, NULL);
 		}
+
+        printf("0%% => container:%lu, size:%lu\n", valid_container_count[0], valid_data_size[0]);
+		for(int i=0; i<10; i++){
+		    printf("%d%% ~ %d%% => container:%lu, size:%lu\n", i, i+1, valid_container_count[i+1], valid_data_size[i+1]);
+		}
+        printf("100%% => container:%lu, size:%lu\n", valid_container_count[11], valid_data_size[11]);
 	}
 
 	/*
