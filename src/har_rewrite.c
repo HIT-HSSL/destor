@@ -126,7 +126,10 @@ void close_har() {
 		if(utilization == 0){
             valid_data_size[0] += cr->size;
             valid_container_count[0] ++;
-		}else{
+		}else if(utilization > 1){
+		    valid_data_size[11] += (CONTAINER_SIZE - CONTAINER_META_SIZE);
+		    valid_container_count[11] ++;
+		}{
             int index = utilization * 10 + 1.0;
             valid_data_size[index] += cr->size;
             valid_container_count[index] ++;
