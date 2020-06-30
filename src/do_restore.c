@@ -67,15 +67,15 @@ static void* lru_restore_thread(void *arg) {
 			sync_queue_push(restore_chunk_queue, rc);
 		}
 
-		total = 0;
-		g_hash_table_foreach(table, exam, NULL);
-		printf("total container read : %lu\n", total);
-		g_hash_table_destroy(table);
-
 		jcr.data_size += c->size;
 		jcr.chunk_num++;
 		free_chunk(c);
 	}
+
+    total = 0;
+    g_hash_table_foreach(table, exam, NULL);
+    printf("total container read : %lu\n", total);
+    g_hash_table_destroy(table);
 
 	sync_queue_term(restore_chunk_queue);
 
