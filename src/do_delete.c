@@ -26,55 +26,46 @@ static inline void delete_an_entry(fingerprint *fp, int64_t *id){
 	index_delete(fp, *id);
 }
 
-static inline void add_an_entry(fingerprint* fp, int64_t* id){
-    struct chunk* c = new_chunk(0);
-    memcpy(&c->fp, fp, sizeof(fingerprint));
-    c->id = id;
-    sync_queue_push(delete_recipe_queue, c);
-}
-
 static void* read_recipe_for_deletion(void *arg) {
     struct backupVersion* bv = (struct backupVersion*)arg;
+
+    struct chunk *c = new_chunk(0);
+    SET_CHUNK(c, CHUNK_FILE_START);
+    sync_queue_push(delete_recipe_queue, c);
 
     int i, j, k;
     for (i = 0; i < bv->number_of_files; i++) {
 
 
+        struct fileRecipeMeta *r = read_next_file_recipe_meta(bv);
 
-//        struct fileRecipeMeta *r = read_next_file_recipe_meta(bv);
+        for (j = 0; j < r->chunknum; j++) {
+            struct chunkPointer* cp = read_next_n_chunk_pointers(bv, 1, &k);
 
-        struct chunk *c = new_chunk(0);
-        SET_CHUNK(c, CHUNK_FILE_START);
+            struct chunk* c = new_chunk(0);
+            memcpy(&c->fp, &cp->fp, sizeof(fingerprint));
+            c->size = cp->size;
+            c->id = cp->id;
 
-        sync_queue_push(delete_recipe_queue, c);
-
-        struct segmentRecipe* sr;
-        while((sr=read_next_segment(bv))){
-            segment_recipe_foreach(sr, add_an_entry, &sr->id);
-            int64_t* r = (int64_t*)malloc(sizeof(int64_t));
-            *r = sr->id;
-            g_hash_table_insert(invalid_containers, r, r);
+            sync_queue_push(delete_recipe_queue, c);
+            free(cp);
         }
 
-//        for (j = 0; j < r->chunknum; j++) {
-//            struct chunkPointer* cp = read_next_n_chunk_pointers(bv, 1, &k);
-//
-//            struct chunk* c = new_chunk(0);
-//            memcpy(&c->fp, &cp->fp, sizeof(fingerprint));
-//            c->size = cp->size;
-//            c->id = cp->id;
-//
-//
-//            sync_queue_push(delete_recipe_queue, c);
-//            free(cp);
-//        }
 
-        c = new_chunk(0);
-        SET_CHUNK(c, CHUNK_FILE_END);
-        sync_queue_push(delete_recipe_queue, c);
-
-//        free_file_recipe_meta(r);
+        free_file_recipe_meta(r);
     }
+
+//    struct segmentRecipe* sr;
+//    while((sr=read_next_segment(bv))){
+//        segment_recipe_foreach(sr, add_an_entry, &sr->id);
+//        int64_t* r = (int64_t*)malloc(sizeof(int64_t));
+//        *r = sr->id;
+//        g_hash_table_insert(invalid_containers, r, r);
+//    }
+
+    c = new_chunk(0);
+    SET_CHUNK(c, CHUNK_FILE_END);
+    sync_queue_push(delete_recipe_queue, c);
 
     sync_queue_term(delete_recipe_queue);
     return NULL;
@@ -82,21 +73,12 @@ static void* read_recipe_for_deletion(void *arg) {
 
 struct GCHashEntry{
     uint64_t cid;
-    Queue* container_queue;
+    Queue* chunk_queue;
 };
-
-void free_chunk_void(void* c) {
-    struct chunk* ck = (struct chunk*)c;
-    if (ck->data) {
-        free(ck->data);
-        ck->data = NULL;
-    }
-    free(ck);
-}
 
 void destructor(gpointer ptr){
     struct GCHashEntry* eptr = (struct GCHashEntry*)ptr;
-    queue_free(eptr->container_queue, free_chunk_void);
+    queue_free(eptr->chunk_queue, free);
     free(ptr);
 }
 
@@ -116,17 +98,19 @@ static void* gether_fingerprint_for_deletion(void *arg) {
         }
         struct GCHashEntry* gcHashEntry = g_hash_table_lookup(global_gc_HashTable, &c->id);
         if(gcHashEntry == NULL){
-            struct GCHashEntry entry;
-            entry.cid = c->id;
-            entry.container_queue = queue_new();
+            struct GCHashEntry* entry = (struct GCHashEntry*)malloc(sizeof(struct GCHashEntry));
+            entry->cid = c->id;
+            entry->chunk_queue = queue_new();
+
             fingerprint* fp = (fingerprint*)malloc(sizeof(fingerprint));
-            memcpy(fp, c->fp, sizeof(fingerprint));
-            queue_push(entry.container_queue, fp);
-            g_hash_table_insert(global_gc_HashTable, &entry.cid, &entry);
+            memcpy(fp, &c->fp, sizeof(fingerprint));
+            queue_push(entry->chunk_queue, fp);
+
+            g_hash_table_insert(global_gc_HashTable, &entry->cid, entry);
         }else{
             fingerprint* fp = (fingerprint*)malloc(sizeof(fingerprint));
-            memcpy(fp, c->fp, sizeof(fingerprint));
-            queue_push(gcHashEntry->container_queue, fp);
+            memcpy(fp, &c->fp, sizeof(fingerprint));
+            queue_push(gcHashEntry->chunk_queue, fp);
         }
         free_chunk(c);
     }
@@ -139,7 +123,12 @@ struct metaEntry {
     fingerprint fp;
 };
 
+uint64_t con_counter;
+uint64_t migrate_counter;
+uint64_t migrate_size;
+
 void chunk_filter(void* item, void* user_data){
+    fingerprint * fp = (fingerprint*)item;
     GHashTable * gHashTable = (GHashTable*)user_data;
     if(g_hash_table_contains(gHashTable, item)){
         g_hash_table_remove(gHashTable, item);
@@ -151,9 +140,12 @@ void chunk_migrate(gpointer key, gpointer value, gpointer user_data){
     struct metaEntry* metaEntry = (struct metaEntry*)value;
     struct chunk* c = new_chunk(metaEntry->len);
 
-    memcpy(c->fp, key, sizeof(fingerprint));
+    memcpy(&c->fp, key, sizeof(fingerprint));
     c->size = metaEntry->len;
     memcpy(c->data, con->data + metaEntry->off, metaEntry->len);
+
+    migrate_counter++;
+    migrate_size += c->size;
 
     sync_queue_push(migrate_data_queue, c);
 }
@@ -161,10 +153,12 @@ void chunk_migrate(gpointer key, gpointer value, gpointer user_data){
 void read_container_filter(gpointer key, gpointer value, gpointer user_data){
     struct GCHashEntry* e = (struct GCHashEntry*)value;
     struct container* con = retrieve_container_by_id(e->cid);
+    printf("container %lu, total chunk %d, drop chunk %d\n", e->cid, con->meta.chunk_num, e->chunk_queue->elem_num);
+    con_counter++;
 
     container_meta_foreach(&con->meta, delete_an_entry, &e->cid);
 
-    queue_foreach(e->container_queue, chunk_filter, con->meta.map);
+    queue_foreach(e->chunk_queue, chunk_filter, con->meta.map);
     g_hash_table_foreach(con->meta.map, chunk_migrate, con);
     free_container(con);
 }
@@ -173,8 +167,10 @@ static void* load_container_for_deletion(void *arg) {
     struct chunk* c = new_chunk(0);
     SET_CHUNK(c, CHUNK_FILE_START);
     sync_queue_push(migrate_data_queue, c);
+    con_counter = 0, migrate_counter = 0, migrate_size = 0;
 
     g_hash_table_foreach(global_gc_HashTable, read_container_filter, NULL);
+    printf("%lu containers involved, %lu chunks (%lu bytes) migrated\n", con_counter, migrate_counter, migrate_size);
 
     c = new_chunk(0);
     SET_CHUNK(c, CHUNK_FILE_END);
@@ -201,6 +197,10 @@ static void* write_container_for_deletion(void *arg) {
         }
         if (CHECK_CHUNK(c, CHUNK_FILE_END)) {
             free_chunk(c);
+            if(seq_count == 0){
+                endFlag = true;
+                break;
+            }
 
             write_container_async(con);
 
@@ -284,14 +284,14 @@ void do_delete(int jobid) {
     pthread_create(&build_t, NULL, gether_fingerprint_for_deletion, NULL);
     do{
         usleep(100);
-    }while(endFlag);
+    }while(!endFlag);
     endFlag = false;
     migrate_data_queue = sync_queue_new(100);
     pthread_create(&load_t, NULL, load_container_for_deletion, NULL);
     pthread_create(&write_t, NULL, write_container_for_deletion, NULL);
     do{
         usleep(100);
-    }while(endFlag);
+    }while(!endFlag);
 
 	/* Delete the invalid entries in the key-value store */
 	if(destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY){
@@ -321,10 +321,10 @@ void do_delete(int jobid) {
 		/* (For simplicity) Since a FIFO order is given, we only need to remove the IDs exactly matched 'bv_num'. */
 		struct backupVersion* bv = open_backup_version(jobid);
 
-//		struct segmentRecipe* sr;
-//		while((sr=read_next_segment(bv))){
-//			segment_recipe_foreach(sr, delete_an_entry, &sr->id);
-//		}
+		struct segmentRecipe* sr;
+		while((sr=read_next_segment(bv))){
+			segment_recipe_foreach(sr, delete_an_entry, &sr->id);
+		}
 
 		bv->deleted = 1;
 		update_backup_version(bv);

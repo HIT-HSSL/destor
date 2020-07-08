@@ -84,17 +84,3 @@ void init_restore_jcr(int revision, char *path) {
 
 	jcr.id = revision;
 }
-
-void init_gc_jcr(int revision, char *path) {
-
-    init_jcr(path);
-
-    jcr.bv = open_backup_version(revision);
-
-    if(jcr.bv->deleted == 1){
-        WARNING("The backup has been deleted!");
-        exit(1);
-    }
-
-    jcr.id = revision;
-}
