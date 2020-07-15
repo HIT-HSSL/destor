@@ -41,6 +41,7 @@ void close_recipe_store() {
 	}
 
 	fwrite(&backup_version_count, 4, 1, fp);
+	fdatasync(fileno(fp));
 
 	fclose(fp);
 	sdsfree(count_fname);
@@ -152,6 +153,10 @@ int backup_version_exists(int number) {
 /*
  * Open an existing bversion for a restore run.
  */
+
+uint64_t read_chunk_num;
+uint64_t read_file_num;
+
 struct backupVersion* open_backup_version(int number) {
 
 	if (!backup_version_exists(number)) {
@@ -218,6 +223,9 @@ struct backupVersion* open_backup_version(int number) {
 
 	sdsfree(fname);
 
+	read_chunk_num = 0;
+    read_file_num = 0;
+
 	return b;
 }
 
@@ -269,12 +277,18 @@ void free_backup_version(struct backupVersion *b) {
 		b->recordbuf = 0;
 	}
 
-	if (b->metadata_fp)
-		fclose(b->metadata_fp);
-	if (b->recipe_fp)
-		fclose(b->recipe_fp);
-	if (b->record_fp)
-		fclose(b->record_fp);
+	if (b->metadata_fp){
+	    fdatasync(fileno(b->metadata_fp));
+        fclose(b->metadata_fp);
+	}
+	if (b->recipe_fp){
+        fdatasync(fileno(b->recipe_fp));
+        fclose(b->recipe_fp);
+	}
+	if (b->record_fp){
+        fdatasync(fileno(b->record_fp));
+        fclose(b->record_fp);
+	}
 
 	b->metadata_fp = b->recipe_fp = b->record_fp = 0;
 	sdsfree(b->path);
@@ -401,8 +415,6 @@ void append_n_chunk_pointers(struct backupVersion* b,
 
 struct fileRecipeMeta* read_next_file_recipe_meta(struct backupVersion* b) {
 
-	static int read_file_num;
-
 	assert(read_file_num <= b->number_of_files);
 
 	int len;
@@ -431,7 +443,6 @@ struct chunkPointer* read_next_n_chunk_pointers(struct backupVersion* b, int n,
 		int *k) {
 
 	/* Total number of read chunks. */
-	static int read_chunk_num;
 
 	if (read_chunk_num == b->number_of_chunks) {
 		/* It's the stream end. */

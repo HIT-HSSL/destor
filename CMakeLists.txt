@@ -15,9 +15,9 @@ include_directories(src/utils)
 #include_directories(/root/anaconda3/include/)
 include_directories(/usr/local/include/glib-2.0/)
 include_directories(/usr/local/lib/glib-2.0/include/)
-include_directories(/home/zxy/destor/isaInclude)
+include_directories(/home/yjs/destor/isaInclude)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 
 add_executable(destor
         src/chunking/ae_chunking.c

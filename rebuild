@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIR=/home/data/working/
+DIR=/mnt/sda/destor
 mkdir -p ${DIR}/recipes/
 mkdir -p ${DIR}/index/
 
