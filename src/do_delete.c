@@ -269,109 +269,91 @@ static void* write_container_for_deletion(void *arg) {
  */
 void do_delete(int jobid) {
 
-	invalid_containers = trunc_manifest(jobid);
+    GHashTable *invalid_containers = trunc_manifest(jobid);
 
-	init_index();
-	init_recipe_store();
-	init_container_store();
+    init_index();
+    init_recipe_store();
 
-	struct backupVersion* backupVersion = open_backup_version(jobid);
+    /* Delete the invalid entries in the key-value store */
+    if(destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY){
+        init_container_store();
 
-    delete_recipe_queue = sync_queue_new(100);
-    pthread_t read_t, build_t, load_t, write_t;
-    endFlag = false;
-    pthread_create(&read_t, NULL, read_recipe_for_deletion, backupVersion);
-    pthread_create(&build_t, NULL, gether_fingerprint_for_deletion, NULL);
-    do{
-        usleep(100);
-    }while(!endFlag);
-    endFlag = false;
-    migrate_data_queue = sync_queue_new(100);
-    pthread_create(&load_t, NULL, load_container_for_deletion, NULL);
-    pthread_create(&write_t, NULL, write_container_for_deletion, NULL);
-    do{
-        usleep(100);
-    }while(!endFlag);
+        struct backupVersion* bv = open_backup_version(jobid);
 
-	/* Delete the invalid entries in the key-value store */
-	if(destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY){
+        /* The entries pointing to Invalid Containers are invalid. */
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, invalid_containers);
+        while(g_hash_table_iter_next(&iter, &key, &value)){
+            containerid id = *(containerid*)key;
+            NOTICE("Reclaim container %lld", id);
+            struct containerMeta* cm = retrieve_container_meta_by_id(id);
 
-		struct backupVersion* bv = open_backup_version(jobid);
+            container_meta_foreach(cm, delete_an_entry, &id);
 
-		/* The entries pointing to Invalid Containers are invalid. */
-		GHashTableIter iter;
-		gpointer key, value;
-		g_hash_table_iter_init(&iter, invalid_containers);
-		while(g_hash_table_iter_next(&iter, &key, &value)){
-			containerid id = *(containerid*)key;
-			NOTICE("Reclaim container %lld", id);
-			struct containerMeta* cm = retrieve_container_meta_by_id(id);
+            free_container_meta(cm);
+        }
 
-			container_meta_foreach(cm, delete_an_entry, &id);
+        bv->deleted = 1;
+        update_backup_version(bv);
+        free_backup_version(bv);
 
-			free_container_meta(cm);
-		}
+        close_container_store();
+    }else if(destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY){
+        /* Ideally, the entries pointing to segments in backup versions of a 'bv_num' less than 'jobid' are invalid. */
+        /* (For simplicity) Since a FIFO order is given, we only need to remove the IDs exactly matched 'bv_num'. */
+        struct backupVersion* bv = open_backup_version(jobid);
 
-		bv->deleted = 1;
-		update_backup_version(bv);
-		free_backup_version(bv);
+        struct segmentRecipe* sr;
+        while((sr=read_next_segment(bv))){
+            segment_recipe_foreach(sr, delete_an_entry, &sr->id);
+        }
 
-	}else if(destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY){
-		/* Ideally, the entries pointing to segments in backup versions of a 'bv_num' less than 'jobid' are invalid. */
-		/* (For simplicity) Since a FIFO order is given, we only need to remove the IDs exactly matched 'bv_num'. */
-		struct backupVersion* bv = open_backup_version(jobid);
+        bv->deleted = 1;
+        update_backup_version(bv);
+        free_backup_version(bv);
 
-		struct segmentRecipe* sr;
-		while((sr=read_next_segment(bv))){
-			segment_recipe_foreach(sr, delete_an_entry, &sr->id);
-		}
+    }else{
+        WARNING("Invalid index type");
+        exit(1);
+    }
 
-		bv->deleted = 1;
-		update_backup_version(bv);
-		free_backup_version(bv);
+    close_recipe_store();
+    close_index();
 
-	}else{
-		WARNING("Invalid index type");
-		exit(1);
-	}
+    char logfile[] = "delete.log";
+    FILE *fp = fopen(logfile, "a");
+    /*
+     * ID of the job we delete,
+     * number of live containers,
+     * memory footprint
+     */
+    fprintf(fp, "%d %d %d\n",
+            jobid,
+            destor.live_container_num,
+            destor.index_memory_footprint);
 
-	close_container_store();
-	close_recipe_store();
-	close_index();
+    fclose(fp);
 
-	char logfile[] = "delete.log";
-	FILE *fp = fopen(logfile, "a");
-	/*
-	 * ID of the job we delete,
-	 * number of live containers,
-	 * memory footprint
-	 */
-	fprintf(fp, "%d %d %d\n",
-			jobid,
-			destor.live_container_num,
-			destor.index_memory_footprint);
+    /* record the IDs of invalid containers */
+    sds didfilepath = sdsdup(destor.working_directory);
+    char s[128];
+    sprintf(s, "recipes/delete_%d.id", jobid);
+    didfilepath = sdscat(didfilepath, s);
 
-	fclose(fp);
+    FILE*  didfile = fopen(didfilepath, "w");
+    if(didfile){
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, invalid_containers);
+        while(g_hash_table_iter_next(&iter, &key, &value)){
+            containerid id = *(containerid*)key;
+            fprintf(didfile, "%lld\n", id);
+        }
 
-	/* record the IDs of invalid containers */
-	sds didfilepath = sdsdup(destor.working_directory);
-	char s[128];
-	sprintf(s, "recipes/delete_%d.id", jobid);
-	didfilepath = sdscat(didfilepath, s);
-
-	FILE*  didfile = fopen(didfilepath, "w");
-	if(didfile){
-		GHashTableIter iter;
-		gpointer key, value;
-		g_hash_table_iter_init(&iter, invalid_containers);
-		while(g_hash_table_iter_next(&iter, &key, &value)){
-			containerid id = *(containerid*)key;
-			fprintf(didfile, "%lld\n", id);
-		}
-
-		fclose(didfile);
-	}
+        fclose(didfile);
+    }
 
 
-	g_hash_table_destroy(invalid_containers);
+    g_hash_table_destroy(invalid_containers);
 }

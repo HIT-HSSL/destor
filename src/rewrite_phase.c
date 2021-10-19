@@ -9,6 +9,21 @@
 
 static pthread_t rewrite_t;
 
+//*************
+static GHashTable *existing;
+
+
+static void smr_init(){
+    existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, NULL);
+}
+
+
+static void smr_release(){
+    g_hash_table_remove_all(existing);
+}
+//*************
+
+
 /* Descending order */
 gint g_record_descmp_by_length(struct containerRecord* a,
 		struct containerRecord* b, gpointer user_data) {
@@ -41,6 +56,13 @@ int rewrite_buffer_push(struct chunk* c) {
 	if (c->id != TEMPORARY_ID) {
 		assert(CHECK_CHUNK(c, CHUNK_DUPLICATE));
 		struct containerRecord tmp_record;
+
+        //*************
+        if(g_hash_table_lookup(existing, c->fp)){
+            goto noconsider;
+        }
+        //*************
+
 		tmp_record.cid = c->id;
 		GSequenceIter *iter = g_sequence_lookup(
 				rewrite_buffer.container_record_seq, &tmp_record,
@@ -61,6 +83,9 @@ int rewrite_buffer_push(struct chunk* c) {
 			record->size += c->size;
 		}
 	}
+    //*************
+    noconsider:
+    //*************
 
 	rewrite_buffer.num++;
 	rewrite_buffer.size += c->size;
@@ -133,6 +158,8 @@ void start_rewrite_phase() {
 
     init_har();
 
+    smr_init();
+
     if (destor.rewrite_algorithm[0] == REWRITE_NO) {
         pthread_create(&rewrite_t, NULL, no_rewrite, NULL);
     } else if (destor.rewrite_algorithm[0]
@@ -150,6 +177,7 @@ void start_rewrite_phase() {
 }
 
 void stop_rewrite_phase() {
+    smr_release();
     pthread_join(rewrite_t, NULL);
     NOTICE("rewrite phase stops successfully!");
 }

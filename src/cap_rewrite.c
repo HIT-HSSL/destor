@@ -68,6 +68,12 @@ void *cap_rewrite(void* arg) {
 				if (g_hash_table_lookup(top, &c->id) == NULL) {
 					/* not in TOP */
 					SET_CHUNK(c, CHUNK_OUT_OF_ORDER);
+                    //*************
+					struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
+					memcpy(newFP, c->fp, sizeof(fingerprint));
+                    g_hash_table_insert(existing, newFP, NULL);
+                    //*************
+
 					VERBOSE("Rewrite phase: %lldth chunk is in out-of-order container %lld",
 							chunk_num, c->id);
 				}
