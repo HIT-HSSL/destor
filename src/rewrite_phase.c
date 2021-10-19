@@ -10,7 +10,6 @@
 static pthread_t rewrite_t;
 
 //*************
-static GHashTable *existing;
 
 
 static void smr_init(){
