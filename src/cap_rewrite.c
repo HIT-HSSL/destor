@@ -68,18 +68,18 @@ void *cap_rewrite(void* arg) {
 				if (g_hash_table_lookup(top, &c->id) == NULL) {
 					/* not in TOP */
 					SET_CHUNK(c, CHUNK_OUT_OF_ORDER);
-                    //*************
-					struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
-					assert(newFP != NULL);
-					memcpy(newFP, c->fp, sizeof(fingerprint));
-					printf("size:%lu, newFPPtr:%lu, c->fpPtr:%lu\n", sizeof(fingerprint), (uint64_t)newFP, (uint64_t)c->fp);
-					assert(existing != NULL);
-                    g_hash_table_insert(existing, newFP, NULL);
-                    //*************
-
 					VERBOSE("Rewrite phase: %lldth chunk is in out-of-order container %lld",
 							chunk_num, c->id);
 				}
+                //*************
+                struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
+                assert(newFP != NULL);
+                memcpy(newFP, c->fp, sizeof(fingerprint));
+                printf("size:%lu, newFPPtr:%lu, c->fpPtr:%lu\n", sizeof(fingerprint), (uint64_t)newFP, (uint64_t)c->fp);
+                assert(existing != NULL);
+                g_hash_table_insert(existing, newFP, NULL);
+                //*************
+
 				chunk_num++;
 			}
 			TIMER_END(1, jcr.rewrite_time);
