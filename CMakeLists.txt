@@ -17,7 +17,7 @@ include_directories(/usr/local/include/glib-2.0/)
 include_directories(/usr/local/lib/glib-2.0/include/)
 include_directories(/home/zxy/isa-l_crypto/include)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 
 add_executable(destor
         src/chunking/ae_chunking.c

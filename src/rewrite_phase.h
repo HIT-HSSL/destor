@@ -10,10 +10,6 @@
 
 #include "destor.h"
 
-//*************
-static GHashTable *existing = NULL;
-//*************
-
 struct containerRecord {
 	containerid cid;
 	int32_t size;

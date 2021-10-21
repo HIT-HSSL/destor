@@ -2,10 +2,15 @@
 #include "jcr.h"
 #include "rewrite_phase.h"
 #include "backup.h"
+#include "storage/containerstore.h"
 
 static int64_t chunk_num;
 
 static GHashTable *top;
+
+//*************
+GHashTable *existing = NULL;
+//*************
 
 static void cap_segment_get_top() {
 
@@ -32,6 +37,14 @@ static void cap_segment_get_top() {
 	VERBOSE("Rewrite phase: Select Top-%d in %d containers", num, length);
 
 	g_sequence_sort(rewrite_buffer.container_record_seq, g_record_cmp_by_id, NULL);
+}
+
+void recordFP(gpointer key, gpointer value, int* user_data){
+    struct fingerprint* fp = (struct fingerprint*)malloc(sizeof(fingerprint));
+    memcpy(fp, key, sizeof(fingerprint));
+    int* cid = (int*)malloc(sizeof(int));
+    *cid = *user_data;
+    g_hash_table_insert(existing, fp, cid);
 }
 
 /*
@@ -65,21 +78,23 @@ void *cap_rewrite(void* arg) {
 					&& !CHECK_CHUNK(c, CHUNK_SEGMENT_START) 
 					&& !CHECK_CHUNK(c, CHUNK_SEGMENT_END)
 					&& CHECK_CHUNK(c, CHUNK_DUPLICATE)) {
-				if (g_hash_table_lookup(top, &c->id) == NULL) {
+				if (
+                    //*************
+				        !CHECK_CHUNK(c,CHUNK_REWRITE_REDIRECTION)
+                    //*************
+				        && g_hash_table_lookup(top, &c->id) == NULL) {
 					/* not in TOP */
 					SET_CHUNK(c, CHUNK_OUT_OF_ORDER);
 					VERBOSE("Rewrite phase: %lldth chunk is in out-of-order container %lld",
 							chunk_num, c->id);
 				}
                 //*************
-                struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
-                assert(newFP != NULL);
-                memcpy(newFP, c->fp, sizeof(fingerprint));
-                assert(existing != NULL);
-                printf("existing addr:%lu\n", (uint64_t)existing);
-                g_hash_table_insert(existing, newFP, NULL);
+				else{
+                    struct containerMeta* cm = retrieve_container_meta_by_id(c->id);
+                    g_hash_table_foreach(cm->map, recordFP, &c->id);
+                    free_container_meta(cm);
+                }
                 //*************
-
 				chunk_num++;
 			}
 			TIMER_END(1, jcr.rewrite_time);

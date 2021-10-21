@@ -177,6 +177,8 @@
 /* This flag will deny all rewriting, including a sparse chunk */
 #define CHUNK_REWRITE_DENIED (0x1000)
 
+#define CHUNK_REWRITE_REDIRECTION (0x2000)
+
 /* signal chunk */
 #define CHUNK_FILE_START (0x0001)
 #define CHUNK_FILE_END (0x0002)

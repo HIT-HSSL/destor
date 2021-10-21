@@ -9,6 +9,8 @@
 
 static pthread_t rewrite_t;
 
+extern GHashTable *existing;
+
 //*************
 
 
@@ -17,8 +19,7 @@ uint64_t smr_hit = 0, smr_miss = 0;
 static void smr_init(){
     printf("smr init\n");
     assert(existing == NULL);
-    printf("existing addr:%lu\n", (uint64_t)existing);
-    existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, NULL);
+    existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, free);
     assert(existing != NULL);
     smr_hit = 0;
     smr_miss = 0;
@@ -70,7 +71,10 @@ int rewrite_buffer_push(struct chunk* c) {
 		struct containerRecord tmp_record;
 
         //*************
-        if(g_hash_table_lookup(existing, c->fp)){
+        int* idp = NULL;
+        if(idp = g_hash_table_lookup(existing, c->fp)){
+            c->id = *idp;
+            SET_CHUNK(c, CHUNK_REWRITE_REDIRECTION);
             smr_hit++;
             goto noconsider;
         }
@@ -122,7 +126,7 @@ struct chunk* rewrite_buffer_pop() {
 	if (c && !CHECK_CHUNK(c, CHUNK_FILE_START) && !CHECK_CHUNK(c, CHUNK_FILE_END)
 			&& !CHECK_CHUNK(c, CHUNK_SEGMENT_START) && !CHECK_CHUNK(c, CHUNK_SEGMENT_END)) {
 		/* A normal chunk */
-		if (CHECK_CHUNK(c, CHUNK_DUPLICATE) && c->id != TEMPORARY_ID) {
+		if (CHECK_CHUNK(c, CHUNK_DUPLICATE) && c->id != TEMPORARY_ID && !CHECK_CHUNK(c,CHUNK_REWRITE_REDIRECTION)) {
 			GSequenceIter *iter = g_sequence_lookup(
 					rewrite_buffer.container_record_seq, &c->id,
 					g_record_cmp_by_id, NULL);
