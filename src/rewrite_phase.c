@@ -183,7 +183,7 @@ void start_rewrite_phase() {
 }
 
 void stop_rewrite_phase() {
-    smr_release();
     pthread_join(rewrite_t, NULL);
+    smr_release();
     NOTICE("rewrite phase stops successfully!");
 }
