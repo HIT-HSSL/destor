@@ -13,12 +13,15 @@ static pthread_t rewrite_t;
 
 
 static void smr_init(){
+    printf("smr init\n");
     assert(existing == NULL);
     existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, NULL);
+    assert(existing != NULL);
 }
 
 
 static void smr_release(){
+    printf("smr release\n");
     assert(existing != NULL);
     g_hash_table_remove_all(existing);
     g_hash_table_destroy(existing);
