@@ -17,6 +17,7 @@ uint64_t smr_hit = 0, smr_miss = 0;
 static void smr_init(){
     printf("smr init\n");
     assert(existing == NULL);
+    printf("existing addr:%lu\n", (uint64_t)existing);
     existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, NULL);
     assert(existing != NULL);
     smr_hit = 0;
