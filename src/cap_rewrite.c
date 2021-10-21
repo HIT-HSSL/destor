@@ -71,6 +71,7 @@ void *cap_rewrite(void* arg) {
                     //*************
 					struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
 					memcpy(newFP, c->fp, sizeof(fingerprint));
+					assert(existing != NULL);
                     g_hash_table_insert(existing, newFP, NULL);
                     //*************
 

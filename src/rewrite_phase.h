@@ -11,7 +11,7 @@
 #include "destor.h"
 
 //*************
-static GHashTable *existing;
+static GHashTable *existing = NULL;
 //*************
 
 struct containerRecord {

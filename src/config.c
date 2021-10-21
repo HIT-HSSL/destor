@@ -17,6 +17,7 @@ int yesnotoi(char *s) {
 }
 
 void load_config_from_string(sds config) {
+
 	char *err = NULL;
 	int linenum = 0, totlines, i;
 	sds *lines = sdssplitlen(config, strlen(config), "\n", 1, &totlines);
@@ -128,27 +129,27 @@ void load_config_from_string(sds config) {
 
 			if (argc > 3) {
 				if (strcasecmp(argv[3], "ddfs") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY);
 					destor.index_specific = INDEX_SPECIFIC_DDFS;
 				} else if (strcasecmp(argv[3], "sampled index") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_PHYSICAL_LOCALITY);
 					destor.index_specific = INDEX_SPECIFIC_SAMPLED;
 				} else if (strcasecmp(argv[3], "block locality caching") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY);
 					destor.index_specific =	INDEX_SPECIFIC_BLOCK_LOCALITY_CACHING;
 				} else if (strcasecmp(argv[3], "extreme binning") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY);
 					destor.index_specific = INDEX_SPECIFIC_EXTREME_BINNING;
 				} else if (strcasecmp(argv[3], "sparse index") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY);
 					destor.index_specific = INDEX_SPECIFIC_SPARSE;
 				} else if (strcasecmp(argv[3], "silo") == 0) {
-					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT 
+					assert(destor.index_category[0] == INDEX_CATEGORY_NEAR_EXACT
                             && destor.index_category[1] == INDEX_CATEGORY_LOGICAL_LOCALITY);
 					destor.index_specific = INDEX_SPECIFIC_SILO;
 				} else {
@@ -340,4 +341,22 @@ void load_config() {
 	fclose(fp);
 	load_config_from_string(config);
 	sdsfree(config);
+}
+
+void load_config_from_path(sds path) {
+    sds config = sdsempty();
+    char buf[DESTOR_CONFIGLINE_MAX + 1];
+
+    FILE *fp;
+    if ((fp = fopen(path, "r")) == 0) {
+        destor_log(DESTOR_WARNING, "No destor.config file in path %s!", path);
+        return;
+    }
+
+    while (fgets(buf, DESTOR_CONFIGLINE_MAX + 1, fp) != NULL)
+        config = sdscat(config, buf);
+
+    fclose(fp);
+    load_config_from_string(config);
+    sdsfree(config);
 }
