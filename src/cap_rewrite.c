@@ -70,6 +70,7 @@ void *cap_rewrite(void* arg) {
 					SET_CHUNK(c, CHUNK_OUT_OF_ORDER);
                     //*************
 					struct fingerprint* newFP = (struct fingerprint*)malloc(sizeof(fingerprint));
+					assert(newFP != NULL);
 					memcpy(newFP, c->fp, sizeof(fingerprint));
 					assert(existing != NULL);
                     g_hash_table_insert(existing, newFP, NULL);

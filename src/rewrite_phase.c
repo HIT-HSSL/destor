@@ -12,15 +12,20 @@ static pthread_t rewrite_t;
 //*************
 
 
+uint64_t smr_hit = 0, smr_miss = 0;
+
 static void smr_init(){
     printf("smr init\n");
     assert(existing == NULL);
     existing = g_hash_table_new_full(g_int64_hash, g_fingerprint_equal, free, NULL);
     assert(existing != NULL);
+    smr_hit = 0;
+    smr_miss = 0;
 }
 
 
 static void smr_release(){
+    printf("smr hit:%lu, miss:%lu\n", smr_hit, smr_miss);
     printf("smr release\n");
     assert(existing != NULL);
     g_hash_table_remove_all(existing);
@@ -65,8 +70,10 @@ int rewrite_buffer_push(struct chunk* c) {
 
         //*************
         if(g_hash_table_lookup(existing, c->fp)){
+            smr_hit++;
             goto noconsider;
         }
+        smr_miss++;
         //*************
 
 		tmp_record.cid = c->id;
