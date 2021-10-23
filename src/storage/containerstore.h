@@ -62,4 +62,6 @@ int container_meta_check_id(struct containerMeta*, containerid*);
 
 void container_meta_foreach(struct containerMeta* cm, void (*func)(fingerprint*, void*), void* data);
 
+int getLatestCID();
+
 #endif /* CONTAINERSTORE_H_ */

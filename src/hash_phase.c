@@ -33,8 +33,8 @@ static void* sha1_thread(void* arg) {
 		//SHA1_Final(c->fp, &ctx);
 
 		mh_sha1_init(ctx);
-		mh_sha1_update_avx512(ctx, c->data, c->size);
-		mh_sha1_finalize_avx512(ctx, c->fp);
+		mh_sha1_update_avx2(ctx, c->data, c->size);
+		mh_sha1_finalize_avx2(ctx, c->fp);
 		
 		//md5_ctx_mgr_init(msg);
 		//result = md5_ctx_mgr_submit(msg, ctxptr, c->data, c->size, HASH_ENTIRE);

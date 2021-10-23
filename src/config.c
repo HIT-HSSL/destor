@@ -247,7 +247,9 @@ void load_config_from_string(sds config) {
 			else if (strcasecmp(argv[1], "capping") == 0
 					|| strcasecmp(argv[1], "cap") == 0)
 				destor.rewrite_algorithm[0] = REWRITE_CAPPING;
-			else {
+            else if (strcasecmp(argv[1], "smr") == 0)
+                destor.rewrite_algorithm[0] = REWRITE_SMR;
+            else {
 				err = "Invalid rewriting algorithm";
 				goto loaderr;
 			}
@@ -340,4 +342,22 @@ void load_config() {
 	fclose(fp);
 	load_config_from_string(config);
 	sdsfree(config);
+}
+
+void load_config_from_path(sds path) {
+    sds config = sdsempty();
+    char buf[DESTOR_CONFIGLINE_MAX + 1];
+
+    FILE *fp;
+    if ((fp = fopen(path, "r")) == 0) {
+        destor_log(DESTOR_WARNING, "No destor.config file in path %s!", path);
+        return;
+    }
+
+    while (fgets(buf, DESTOR_CONFIGLINE_MAX + 1, fp) != NULL)
+        config = sdscat(config, buf);
+
+    fclose(fp);
+    load_config_from_string(config);
+    sdsfree(config);
 }

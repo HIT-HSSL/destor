@@ -18,6 +18,7 @@ extern void make_trace(char *raw_files);
 
 extern int load_config();
 extern void load_config_from_string(sds config);
+extern void load_config_from_path(sds path);
 
 /* : means argument is required.
  * :: means argument is required and no space.
@@ -286,7 +287,8 @@ int main(int argc, char **argv) {
 			break;
 		case 'p': {
 			sds param = sdsnew(optarg);
-			load_config_from_string(param);
+//load_config_from_string(param);
+            load_config_from_path(param);
 			break;
 		}
 		default:

@@ -142,6 +142,8 @@ void start_rewrite_phase() {
         pthread_create(&rewrite_t, NULL, cbr_rewrite, NULL);
     } else if (destor.rewrite_algorithm[0] == REWRITE_CAPPING) {
         pthread_create(&rewrite_t, NULL, cap_rewrite, NULL);
+    } else if (destor.rewrite_algorithm[0] == REWRITE_SMR) {
+        pthread_create(&rewrite_t, NULL, smr_rewrite, NULL);
     } else {
         fprintf(stderr, "Invalid rewrite algorithm\n");
         exit(1);

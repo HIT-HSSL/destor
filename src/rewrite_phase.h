@@ -26,6 +26,7 @@ struct {
 void* cfl_rewrite(void* arg);
 void* cbr_rewrite(void* arg);
 void* cap_rewrite(void* arg);
+void* smr_rewrite(void* arg);
 
 /* har_rewrite.c */
 void init_har();

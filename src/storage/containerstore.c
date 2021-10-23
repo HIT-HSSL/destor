@@ -128,6 +128,13 @@ void write_container_async(struct container* c) {
 	sync_queue_push(container_buffer, c);
 }
 
+
+int lcid = -1;
+
+int getLatestCID(){
+    return lcid;
+}
+
 /*
  * Called by Append phase
  */
@@ -178,6 +185,7 @@ void write_container(struct container* c) {
 			perror("Fail to write a container in container store.");
 			exit(1);
 		}
+		lcid = c->meta.id;
 
 		pthread_mutex_unlock(&mutex);
 	} else {
@@ -306,6 +314,7 @@ static struct containerMeta* container_meta_duplicate(struct container *c) {
 
 	return dup;
 }
+
 
 struct containerMeta* retrieve_container_meta_by_id(containerid id) {
 	struct containerMeta* cm = NULL;
